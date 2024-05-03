@@ -28,4 +28,6 @@ Database Queries for setup
 
 Steps to run
 1. go mod tidy
-2. go run main.go
+2. buf lint
+3. buf generate 
+4. go run main.go
