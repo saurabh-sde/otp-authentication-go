@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package otp_service.v1;
+
+service OTPService {
+    rpc GenerateOTP(GenerateOTPRequest) returns (GenerateOTPResponse);
+}
+
+message GenerateOTPRequest {
+    string mobile = 1;
+}
+
+
+message GenerateOTPResponse {
+    string message = 1;
+}

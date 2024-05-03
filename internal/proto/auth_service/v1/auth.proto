@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package auth_service.v1;
+
+service AuthService {
+    rpc SignupWithPhoneNumber(SignupWithPhoneNumberRequest) returns (SignupWithPhoneNumberResponse);
+    rpc VerifyPhoneNumber(VerifyPhoneNumberRequest) returns (VerifyPhoneNumberResponse);
+    rpc LoginWithPhoneNumber(LoginWithPhoneNumberRequest) returns (LoginWithPhoneNumberResponse);
+    rpc ValidatePhoneNumberLogin(ValidatePhoneNumberLoginRequest) returns (ValidatePhoneNumberLoginResponse);
+    rpc GetProfile(GetProfileRequest) returns (GetProfileResponse);
+}
+
+message SignupWithPhoneNumberRequest {
+    string name=1;
+    string mobile = 2;
+}
+
+message SignupWithPhoneNumberResponse {
+    string message = 1;
+}
+
+message VerifyPhoneNumberRequest {
+    string mobile = 1;
+    string code = 2;
+}
+
+message VerifyPhoneNumberResponse {
+    string message = 1;
+    bool valid = 2;
+}
+
+message LoginWithPhoneNumberRequest {
+    string mobile = 1;
+}
+
+message LoginWithPhoneNumberResponse {
+    string user_id = 1;
+    string message = 2;
+}
+
+message ValidatePhoneNumberLoginRequest {
+    string mobile = 1;
+    string code = 2;
+}
+
+message ValidatePhoneNumberLoginResponse {
+    string message = 1;
+    bool valid = 2;
+}
+
+message GetProfileRequest {
+    string user_id = 1;
+}
+
+message GetProfileResponse {
+    string id = 1;
+    string name = 2;
+    string mobile = 3;
+    string status = 4;
+}
