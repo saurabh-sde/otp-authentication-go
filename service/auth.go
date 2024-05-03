@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"log"
 
 	"connectrpc.com/connect"
@@ -182,7 +183,9 @@ func (s *AuthService) GetProfile(ctx context.Context, req *connect.Request[auth_
 	user, err := model.GetUserById(req.Msg.UserId)
 	if err != nil || user == nil {
 		utility.Print(&err, "Error getting user")
-		return res, nil
+		res.Msg.Status = "User not found"
+		err := errors.New("User not found")
+		return res, err
 	}
 	// return resp
 	res.Msg.Id = cast.ToString(user.Id)

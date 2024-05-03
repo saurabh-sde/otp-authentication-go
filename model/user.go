@@ -55,9 +55,6 @@ func GetUserById(id string) (*AppUser, error) {
 	var user AppUser
 	err := o.QueryTable(new(AppUser)).Filter("id", id).One(&user)
 	if err != nil {
-		if err == orm.ErrNoRows {
-			return nil, nil
-		}
 		utility.Print(&err, "Err in GetUserById: ", err)
 		return nil, err
 	}
@@ -70,9 +67,6 @@ func GetUserByMobile(mob string) (*AppUser, error) {
 	var user AppUser
 	err := o.QueryTable(new(AppUser)).Filter("mobile", mob).One(&user)
 	if err != nil {
-		if err == orm.ErrNoRows {
-			return nil, nil
-		}
 		utility.Print(&err, "Err in GetUserByName: ", err)
 		return nil, err
 	}
