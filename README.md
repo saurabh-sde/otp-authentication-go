@@ -72,6 +72,7 @@ MOBILE=""
 4. go run main.go
 5. Use postman to import proto files for testing RPC methods
 > internal/proto/auth_service/v1/auth.proto
+
 > internal/proto/otp_service/v1/otp.proto
 
 # Package Documentations
