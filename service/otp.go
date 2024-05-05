@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"log"
 
 	"connectrpc.com/connect"
 	otp_servicev1 "github.com/saurabh-sde/otp-authentication-go/internal/gen/otp_service/v1"
@@ -12,7 +11,7 @@ import (
 type OTPService struct{}
 
 func (s *OTPService) GenerateOTP(ctx context.Context, req *connect.Request[otp_servicev1.GenerateOTPRequest]) (*connect.Response[otp_servicev1.GenerateOTPResponse], error) {
-	log.Println("GenerateOTP Request: headers: ", req.Header(), " req: ", req.Msg.Mobile)
+	utility.Print(nil, "GenerateOTP Request: headers: ", req.Header(), " req: ", req.Msg.Mobile)
 
 	res := connect.NewResponse(&otp_servicev1.GenerateOTPResponse{})
 

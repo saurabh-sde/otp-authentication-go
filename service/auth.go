@@ -3,12 +3,13 @@ package service
 import (
 	"context"
 	"errors"
-	"log"
 
 	"connectrpc.com/connect"
 	"github.com/astaxie/beego/orm"
+	"github.com/saurabh-sde/otp-authentication-go/auth"
 	"github.com/saurabh-sde/otp-authentication-go/client"
 	auth_servicev1 "github.com/saurabh-sde/otp-authentication-go/internal/gen/auth_service/v1"
+	"github.com/saurabh-sde/otp-authentication-go/messagingQueue/publish"
 	"github.com/saurabh-sde/otp-authentication-go/model"
 	"github.com/saurabh-sde/otp-authentication-go/utility"
 	"github.com/spf13/cast"
@@ -17,7 +18,7 @@ import (
 type AuthService struct{}
 
 func (s *AuthService) SignupWithPhoneNumber(ctx context.Context, req *connect.Request[auth_servicev1.SignupWithPhoneNumberRequest]) (*connect.Response[auth_servicev1.SignupWithPhoneNumberResponse], error) {
-	log.Println("Request headers: ", req.Header())
+	utility.Print(nil, "Request headers: ", req.Header())
 
 	res := connect.NewResponse(&auth_servicev1.SignupWithPhoneNumberResponse{})
 	if req.Msg.Mobile == "" || len(req.Msg.Mobile) < 10 {
@@ -61,21 +62,32 @@ func (s *AuthService) SignupWithPhoneNumber(ctx context.Context, req *connect.Re
 		utility.Print(nil, "Added new user: ", id)
 		utility.Print(nil, "GENERATING OTP - New User: ", id)
 
+		generateOTPResp := "OTP sent to Mobile number"
+
+		// TODO: Send OTP using Messaging Queue for new user
 		// using OTP service client for OTP generation
-		generateOTPResp, err := client.GenerateOTPClient(req.Msg.Mobile)
+		// generateOTPResp, err := client.GenerateOTPClient(req.Msg.Mobile)
+		// if err != nil {
+		// 	res.Msg.Message = "Error in sending OTP"
+		// 	utility.Print(&err, "Error sending OTP to user")
+		// 	return res, nil
+		// }
+
+		// Use MQ for send OTP for new user
+		err = publish.PublishToMQ(newUser.Mobile)
 		if err != nil {
 			res.Msg.Message = "Error in sending OTP"
 			utility.Print(&err, "Error sending OTP to user")
 			return res, nil
 		}
+
 		res.Msg.Message = generateOTPResp
-		return res, nil
 	}
 	return res, nil
 }
 
 func (s *AuthService) VerifyPhoneNumber(ctx context.Context, req *connect.Request[auth_servicev1.VerifyPhoneNumberRequest]) (*connect.Response[auth_servicev1.VerifyPhoneNumberResponse], error) {
-	log.Println("VerifyPhoneNumber Request headers: ", req.Header())
+	utility.Print(nil, "VerifyPhoneNumber Request headers: ", req.Header())
 
 	res := connect.NewResponse(&auth_servicev1.VerifyPhoneNumberResponse{})
 
@@ -102,19 +114,13 @@ func (s *AuthService) VerifyPhoneNumber(ctx context.Context, req *connect.Reques
 		utility.Print(&err, "Error updating user")
 		return res, err
 	}
-
-	// add login event
-	_, err = model.AddLogEvent(&model.LogEvent{EventName: "login", UserId: cast.ToString(user.Id)})
-	if err != nil {
-		// skip returning error as login was success
-		utility.Print(&err, "Error Adding login event")
-	}
-
+	res.Msg.Message = "Registered Successfully"
+	res.Msg.Valid = true
 	return res, nil
 }
 
 func (s *AuthService) LoginWithPhoneNumber(ctx context.Context, req *connect.Request[auth_servicev1.LoginWithPhoneNumberRequest]) (*connect.Response[auth_servicev1.LoginWithPhoneNumberResponse], error) {
-	log.Println("LoginWithPhoneNumber Request headers: ", req.Header())
+	utility.Print(nil, "LoginWithPhoneNumber Request headers: ", req.Header())
 
 	res := connect.NewResponse(&auth_servicev1.LoginWithPhoneNumberResponse{})
 
@@ -125,6 +131,7 @@ func (s *AuthService) LoginWithPhoneNumber(ctx context.Context, req *connect.Req
 	}
 
 	utility.Print(nil, "GENERATING LOGIN OTP: ", res.Msg.UserId)
+	// Login flow does not need messaging queue acc. to requirements
 	// using OTP service client for OTP generation
 	generateOTPResp, err := client.GenerateOTPClient(req.Msg.Mobile)
 	if err != nil {
@@ -133,11 +140,12 @@ func (s *AuthService) LoginWithPhoneNumber(ctx context.Context, req *connect.Req
 		return res, nil
 	}
 	res.Msg.Message = generateOTPResp
+	res.Msg.UserId = cast.ToString(user.Id)
 	return res, nil
 }
 
 func (s *AuthService) ValidatePhoneNumberLogin(ctx context.Context, req *connect.Request[auth_servicev1.ValidatePhoneNumberLoginRequest]) (*connect.Response[auth_servicev1.ValidatePhoneNumberLoginResponse], error) {
-	log.Println("ValidatePhoneNumberLogin Request headers: ", req.Header())
+	utility.Print(nil, "ValidatePhoneNumberLogin Request headers: ", req.Header())
 
 	res := connect.NewResponse(&auth_servicev1.ValidatePhoneNumberLoginResponse{})
 
@@ -168,17 +176,26 @@ func (s *AuthService) ValidatePhoneNumberLogin(ctx context.Context, req *connect
 		utility.Print(&err, "Error Adding login event")
 	}
 
+	// send jwt auth token
+	loginToken, err := auth.CreateJWT(user.Mobile)
+	if err != nil {
+		utility.Print(&err, "Error generating login token")
+		res.Msg.Message = "Invalid Server error"
+		return res, err
+	}
+
 	// return response
 	res.Msg.Message = "OTP Login Successful"
 	res.Msg.Valid = true
-
+	res.Msg.Token = loginToken
 	return res, nil
 }
 
 func (s *AuthService) GetProfile(ctx context.Context, req *connect.Request[auth_servicev1.GetProfileRequest]) (*connect.Response[auth_servicev1.GetProfileResponse], error) {
-	log.Println("GetProfile Request headers: ", req.Header())
+	utility.Print(nil, "GetProfile Request headers: ", req.Header())
 
 	res := connect.NewResponse(&auth_servicev1.GetProfileResponse{})
+
 	// check user exists or not
 	user, err := model.GetUserById(req.Msg.UserId)
 	if err != nil || user == nil {
@@ -187,6 +204,23 @@ func (s *AuthService) GetProfile(ctx context.Context, req *connect.Request[auth_
 		err := errors.New("User not found")
 		return res, err
 	}
+
+	// validate bearer token with mobile from bearer token value and user.Mobile from database using userId
+	mobileFromToken, err := auth.ParseBearerToken(req.Header())
+	if err != nil {
+		utility.Print(&err, "Error in parsing token")
+		res.Msg.Status = "Unauthenticated request"
+		return res, err
+	}
+
+	// check valid mobile
+	if mobileFromToken != user.Mobile {
+		utility.Print(&err, "Error in validating token with mobile")
+		res.Msg.Status = "Unauthenticated request"
+		err := errors.New(res.Msg.Status)
+		return res, err
+	}
+
 	// return resp
 	res.Msg.Id = cast.ToString(user.Id)
 	res.Msg.Name = user.Name

@@ -9,8 +9,8 @@ import (
 
 type LogEvent struct {
 	Id        int64     `orm:"column(id)" json:"id"`
-	EventName string    `orm:"column(event_name)" json:"name"`
-	UserId    string    `orm:"column(log_id)" json:"mobile"`
+	EventName string    `orm:"column(event_name)" json:"eventName"`
+	UserId    string    `orm:"column(user_id)" json:"userId"`
 	CreatedAt time.Time `orm:"column(created_at);auto_now_add"`
 }
 

@@ -10,6 +10,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/saurabh-sde/otp-authentication-go/internal/gen/auth_service/v1/auth_servicev1connect"
 	"github.com/saurabh-sde/otp-authentication-go/internal/gen/otp_service/v1/otp_servicev1connect"
+	"github.com/saurabh-sde/otp-authentication-go/messagingQueue/recieve"
 	"github.com/saurabh-sde/otp-authentication-go/service"
 	"github.com/saurabh-sde/otp-authentication-go/utility"
 	"golang.org/x/net/http2"
@@ -22,27 +23,34 @@ func init() {
 	// *** Load environment variables from .env file
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Fatalf("Error loading .env file: %+v", err)
 	}
 
 	// *** Connect to the database
 
 	// driver
-	orm.RegisterDriver("postgres", orm.DRPostgres)
+	dbDriver := os.Getenv("DB_DRIVER")
+	orm.RegisterDriver(dbDriver, orm.DRPostgres)
 
 	// Set the database connection str
 	// connStr := "postgres://" + DBUser + ":" + DBPassword + "@" + DBHost + ":" + DBPort + "/" + DBName
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_HOST"), os.Getenv("PORT"),
+	dsn := fmt.Sprintf("%s://%s:%s@%s:%s/%s?sslmode=disable",
+		dbDriver,
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"),
 		os.Getenv("DB_NAME"))
 
 	// register database
-	orm.RegisterDataBase("default", "postgres", dsn)
+	err = orm.RegisterDataBase("default", dbDriver, dsn)
+	if err != nil {
+		log.Fatalf("Error connecting DB: %+v", err)
+	}
 	// debug sql logs true
 	orm.Debug = true
-
 }
+
 func main() {
 	mux := http.NewServeMux()
 	// service
@@ -52,8 +60,9 @@ func main() {
 	mux.Handle(otp_servicev1connect.NewOTPServiceHandler(otpService))
 	mux.Handle(auth_servicev1connect.NewAuthServiceHandler(autService))
 
-	utility.Print(nil, "Initializing server: ", os.Getenv("LOCAL_HOST"))
+	go recieve.InitializeMQConsumer()
 
+	utility.Print(nil, "Initializing server: ", os.Getenv("LOCAL_HOST"))
 	http.ListenAndServe(
 		os.Getenv("LOCAL_HOST"),
 		// Use h2c so we can serve HTTP/2 without TLS.

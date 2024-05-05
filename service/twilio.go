@@ -26,6 +26,7 @@ func TwilioSendOTP(mobile string) (string, error) {
 			utility.Print(&err, "SendOTP status", resp.Status)
 		}
 	}
+	utility.Print(&err, "SendOTP Success")
 	return "OTP Generated", err
 }
 

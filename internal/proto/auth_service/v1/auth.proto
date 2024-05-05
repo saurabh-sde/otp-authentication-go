@@ -46,6 +46,7 @@ message ValidatePhoneNumberLoginRequest {
 message ValidatePhoneNumberLoginResponse {
     string message = 1;
     bool valid = 2;
+    string token = 3;
 }
 
 message GetProfileRequest {

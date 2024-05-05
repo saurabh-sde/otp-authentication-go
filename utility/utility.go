@@ -1,15 +1,17 @@
 package utility
 
-import "fmt"
+import (
+	"log"
+)
 
 func Print(err *error, v ...interface{}) {
 	if len(v) > 0 {
 		// print INFO
-		fmt.Printf("INFO: %+v\n", v)
+		log.Printf("INFO: %+v\n", v)
 	}
 	// print error
 	if err != nil {
-		fmt.Printf("ERROR: %+v\n", *err)
+		log.Printf("ERROR: %+v\n", *err)
 		return
 	}
 }
