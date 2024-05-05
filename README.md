@@ -2,7 +2,7 @@
 
 # Tasks
 Basic gRPC Service using Connect.
-- two basic connect services: auth-service and otp-service.
+- `auth-service and otp-service`.
 
 ## Auth Service
 Authentication service that manages user accounts and profiles.
@@ -17,11 +17,11 @@ account is created.
 5. Get Profile: Users can retrieve their profile data.
 
 ### RPCs to Implement
-- SignupWithPhoneNumber
-- VerifyPhoneNumber
-- LoginWithPhoneNumber
-- ValidatePhoneNumberLogin
-- GetProfile
+- `SignupWithPhoneNumber`
+- `VerifyPhoneNumber`
+- `LoginWithPhoneNumber`
+- `ValidatePhoneNumberLogin`
+- `GetProfile`
 
 ## OTP Service
 service dedicated to generating OTPs.
@@ -31,46 +31,86 @@ service dedicated to generating OTPs.
 provide it to the requesting service.
 
 ### RPCs to Implement
-- GenerateOTP
+- `GenerateOTP`
 
-
-# Database Integration
-Integrating a PostgreSQL database to persist data
-related to user activities.
-## BeegGo ORM 
-1. Perform CRUD operations
-### Database Operations
-1. Persist User Profiles: Store user profile information upon account creation.
-2. Log Events: Record login and logout activities.
 <br>
 
-## Configurations
+# Database Integration
+Integrating a `PostgreSQL` database to persist data
+related to user activities.
+## BeegGo ORM 
+1. Performing all CRUD operations
+### Database Operations
+1. `Persist User Profiles`: Store user profile information upon account creation.
+2. `Log Events`: Record login and logout activities.
+<br>
+<br>
 
-### Sample .env config file
+# Messaging with Broker
+
+Implement a messaging broker to facilitate communication between services.
+
+## Auth Service
+- Publish Events: Send a `SendOTP` message on the `verification` topic when a
+new account is created.
+
+## OTP Service
+- Consume Events: Listen to the `verification` topic, receive the `SendOTP` message, and proceed to send the OTP to the user's phone number using Twilio.
+<br>
+<br>
+
+# Configurations
+
+### Sample `.env` config file
 ```
-SECRET=
-TWILIO_AUTH_TOKEN=
-TWILIO_ACCOUNT_SID=
-TWILIO_SERVICE_SID=
-DB_USER=""
-DB_PASSWORD=""
-DB_NAME=""
+SECRET=<JWT Token secret>
+TWILIO_AUTH_TOKEN=<get from twilio>
+TWILIO_ACCOUNT_SID=<get from twilio>
+TWILIO_SERVICE_SID=<get from twilio>
+DB_USER="<set user>"
+DB_PASSWORD="<set password>"
+DB_NAME="auth"
 DB_HOST="localhost"
-PORT="5432"
+DB_PORT="5432"
 DB_DRIVER="postgres"
 LOCAL_HOST="localhost:8080"
-MOBILE=""
+HOSTNAME="localhost"
+PORT="8080"
+RABBIT_HOST="localhost"
+RABBIT_USER="guest"
+RABBIT_PASSWORD="guest"
+RABBIT_PORT="5672"
+MOBILE="<used for running Send OTP test>"
 ```
 
-### Database Queries for setup
+### Run services after installation
+1. Postgres - 
+```
+brew install postgresql@14
+# start service
+brew services start postgresql
+```
+2. RabbitMQ - https://www.rabbitmq.com/docs/install-homebrew
+```
+brew install rabbitmq
+# starts a local RabbitMQ node
+brew services start rabbitmq
+
+# highly recommended: enable all feature flags on the running node
+/opt/homebrew/sbin/rabbitmqctl enable_feature_flag all
+```
+
+### Setup Postgres Database
      query.sql
 
-## Steps to run
-- go mod tidy
-- buf lint
-- buf generate 
-- update .env with all required values
-- go run main.go
+# Steps to run
+- clone repo
+- `go mod tidy`
+- `buf lint`
+- `buf generate` 
+- update `.env `with all required values
+- start `postgres and rabbitMQ` service
+- `go run main.go`
 - Use postman to import proto files for testing RPC methods
 > internal/proto/auth_service/v1/auth.proto
 
@@ -86,3 +126,13 @@ MOBILE=""
 
 ## Beego ORM
 1. https://pkg.go.dev/github.com/beego/beego/v2/client/orm#section-readme
+
+## Rabbit MQ
+1. `Topics` - https://www.rabbitmq.com/tutorials/tutorial-five-go
+
+<br>
+
+# Next Steps 
+
+1. Docker setup using ` docker-compose.yml `
+- Setup in single docker `docker-compose up`
